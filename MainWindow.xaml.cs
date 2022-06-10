@@ -84,17 +84,16 @@ namespace WPF_CloverApp
             for (int i = 0; i < screens.Length; i++)
             {
                 Rectangle scr = screens[i].WorkingArea;
-                log("placeImg", "info", "screen " + i + " parameters: " + scr.Width + "x" + scr.Height);
+                log("placeImg", "info", "screen " + i + " parameters: " + scr.Width + "x" + scr.Height + "X: " + scr.X);
 
                 if (scr.X < xMinPos)
                     xMinPos = scr.X;
-                if (scr.X > xMaxPos)
-                    xMaxPos = scr.X;
-                xMaxPos += workingArea.Width;
+                xMaxPos += scr.Width;
             }
-            log("placeImg", "info", "screen coordinates: xMinPos of " + xMinPos + " and xMaxPos of " + xMaxPos);
+            xMaxPos += xMinPos;
+            log("placeImg", "info", "parameters: min: " + xMinPos + ", max: " + xMaxPos);
 
-            Window.Left = workingArea.Left + workingArea.Width - 120;
+            Window.Left = workingArea.Left + workingArea.Width - Window.Width;
             Window.Top = workingArea.Top + workingArea.Height - 133;
         }
 
@@ -109,9 +108,9 @@ namespace WPF_CloverApp
 
         private void moveTheFox()
         {
-            isFoxMoving = true; // lock
+            isFoxMoving = true;
             timerAnimate.Start();
-            if (Window.Left != target) // needs some fine-tuning to smooth out the scoot. also, fix issue where clover goes off screen.
+            if (Window.Left != target)
             {
                 if (target > Window.Left)
                     Window.Left += 2;
@@ -138,13 +137,10 @@ namespace WPF_CloverApp
             {
                 log("startAnim", "info", "starting move with mvF of " + mvFrequency + " and IN of " + invertedNumbers[mvFrequency].ToString());
                 target = (int)Math.Ceiling((double)rnd.Next((int)(Window.Left - 500), (int)(Window.Left + 500)) / 2) * 2; // don't let clover see this math
-                while (target == 0)
-                {
-                    if (target > (xMaxPos - 200))
-                        target = target - (target - xMaxPos) - (int)Window.Width; // scoot clover back into a visible region
-                    if (target < xMinPos && xMinPos != 0)
-                        target = (target - (target - xMinPos)); // scoot clover back into a visible region. don't need to account for window width here.
-                }
+                if (target > (xMaxPos - Window.Width)) // if too far right
+                    target = target - (target - xMaxPos) - (int)Window.Width; // scoot clover back into a visible region
+                if (target < xMinPos && xMinPos != 0) // if too far left
+                    target = (target - (target - xMinPos)); // scoot clover back into a visible region. don't need to account for window width here.
 
                 log("startAnim", "info", "starting to move clover with target of " + target + " with current location of " + Window.Left + ", difference of " + (target - Window.Left));
                 timerAnimate.Start();
@@ -157,11 +153,10 @@ namespace WPF_CloverApp
         Form ab = new FormInfo();
         private void createInfoForm()
         {
-            if (ab.IsDisposed) // it's been opened and closed previously. make new form and present.
+            ab.Icon = new Icon("cloverchungus.ico");
+            if (ab.IsDisposed)
                 ab = new FormInfo();
             ab.Show();
-
-            ab.Icon = new Icon("cloverchungus.ico");
 
             Control[] abBtnClose = ab.Controls.Find("btnClose", true);
             Control[] abBtnDebug = ab.Controls.Find("btnDebug", true);
@@ -184,6 +179,7 @@ namespace WPF_CloverApp
             }
         }
 
+
         Form dbgForm = new Form();
         private void createLogForm() // home made, from scratch debug window using fresh ingredients.
         {
@@ -198,6 +194,10 @@ namespace WPF_CloverApp
             RichTextBox tb = new RichTextBox();
             Button btnForcePlacement = new Button();
             Button btnUpdateLog = new Button();
+            //System.Windows.Forms.Timer timer = new System.Windows.Forms.Timer();
+            //timer.Interval = 1000;
+            //timer.Tick += delegate { tb.Text = string.Join("\n", logArr); dbgForm.Text = Window.Left.ToString(); };
+            //timer.Start();
 
             tb.Size = new Size(700, 400);
             tb.Text = string.Join("\n", logArr); // add support for automatically refreshing text box someday.
@@ -210,7 +210,7 @@ namespace WPF_CloverApp
             btnUpdateLog.Text = "update log";
             btnUpdateLog.Width = 80;
             btnUpdateLog.Location = new System.Drawing.Point(702, 25);
-            btnUpdateLog.Click += delegate { tb.Text = string.Join("\n", logArr); };
+            btnUpdateLog.Click += delegate { tb.Text = string.Join("\n", logArr); dbgForm.Text = Window.Left.ToString(); };
 
             dbgForm.Controls.Add(tb);
             dbgForm.Controls.Add(btnForcePlacement);
